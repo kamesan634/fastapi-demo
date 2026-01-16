@@ -1,0 +1,81 @@
+# ============================================
+# Pre-commit 配置
+# ============================================
+# 在 git commit 前自動執行程式碼檢查和格式化
+#
+# 安裝方式:
+#   pip install pre-commit
+#   pre-commit install
+#
+# 手動執行:
+#   pre-commit run --all-files
+# ============================================
+
+repos:
+  # Black - Python 程式碼格式化
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.12
+        args: [--line-length=88]
+
+  # isort - Import 排序
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  # Flake8 - 程式碼風格檢查
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+        args:
+          - --max-line-length=88
+          - --extend-ignore=E203,E501
+          - --exclude=alembic/versions/*
+
+  # 通用檢查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # 檢查 YAML 語法
+      - id: check-yaml
+      # 檢查 JSON 語法
+      - id: check-json
+      # 檢查 TOML 語法
+      - id: check-toml
+      # 確保檔案以換行結尾
+      - id: end-of-file-fixer
+      # 移除行尾空白
+      - id: trailing-whitespace
+      # 檢查大檔案
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      # 檢查 merge conflict 標記
+      - id: check-merge-conflict
+      # 檢查 debug 語句
+      - id: debug-statements
+      # 修正 mixed line ending
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # MyPy - 型別檢查（可選）
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - types-redis
+  #       args: [--ignore-missing-imports]
+
+# CI 配置
+ci:
+  autofix_commit_msg: "style: auto-fix by pre-commit hooks"
+  autofix_prs: true
+  autoupdate_commit_msg: "chore: update pre-commit hooks"

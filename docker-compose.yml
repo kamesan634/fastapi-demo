@@ -1,0 +1,138 @@
+# ============================================
+# FastAPI Demo - Docker Compose 配置
+# ============================================
+# 服務說明：
+#   - web: FastAPI 應用程式 (Port 8002)
+#   - db: MySQL 8.4 資料庫 (Port 3302)
+#   - redis: Redis 7 快取 (Port 6382)
+#   - celery_worker: Celery 背景任務處理器
+# ============================================
+
+services:
+  # FastAPI 應用程式服務
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_web
+    ports:
+      - "8003:8003"  # 對外 Port 8003
+    volumes:
+      - .:/app  # 開發時掛載原始碼，支援熱重載
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=dev123
+      - DB_NAME=fastapidemo_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '等待資料庫就緒...' &&
+        sleep 5 &&
+        echo '執行資料庫遷移...' &&
+        alembic upgrade head &&
+        echo '啟動 FastAPI 伺服器...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - fastapi_network
+
+  # MySQL 資料庫服務
+  db:
+    image: mysql:8.4
+    container_name: fastapi_db
+    ports:
+      - "3303:3306"  # 對外 Port 3303，方便外部工具連線
+    environment:
+      MYSQL_ROOT_PASSWORD: dev123
+      MYSQL_DATABASE: fastapidemo_db
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-log-bin
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdev123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - fastapi_network
+
+  # Redis 快取服務
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi_redis
+    ports:
+      - "6383:6379"  # 對外 Port 6383
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - fastapi_network
+
+  # Celery Worker 背景任務處理器
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_celery_worker
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=dev123
+      - DB_NAME=fastapidemo_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.kamesan.tasks.celery_app worker --loglevel=info
+    restart: unless-stopped
+    networks:
+      - fastapi_network
+
+# 資料卷定義
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# 網路定義
+networks:
+  fastapi_network:
+    driver: bridge

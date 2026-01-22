@@ -57,29 +57,8 @@ jobs:
             sleep 2
           done
 
-      - name: Debug - Check bcrypt version and test
-        run: |
-          echo "=== Installed packages ==="
-          pip show bcrypt passlib
-          echo ""
-          echo "=== Test bcrypt directly ==="
-          python -c "
-          import bcrypt
-          print(f'bcrypt version: {bcrypt.__version__}')
-          # Test with short password
-          password = b'admin123'
-          print(f'Password length: {len(password)} bytes')
-          hashed = bcrypt.hashpw(password, bcrypt.gensalt())
-          print(f'Hash successful: {hashed[:20]}...')
-          # Test with passlib
-          from passlib.context import CryptContext
-          pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-          hashed2 = pwd_context.hash('admin123')
-          print(f'Passlib hash successful: {hashed2[:20]}...')
-          "
-
       - name: Run tests with coverage
-        run: pytest --cov=app --cov-report=xml --cov-report=html -v --tb=long
+        run: pytest --cov=app --cov-report=xml --cov-report=html -v
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306

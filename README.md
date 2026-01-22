@@ -1,7 +1,6 @@
-# 零售業簡易ERP系統 - FastAPI
+# 龜三的ERP Demo - FastAPI
 
-<!-- 請將 YOUR_USERNAME/YOUR_REPO 改成你的 GitHub 帳號/Repo 名稱 -->
-![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/kamesan634/fastapi-demo/actions/workflows/ci.yml/badge.svg)
 
 基於 Python 3.12 + FastAPI DEMO用的零售業 ERP 系統後端 API。
 

@@ -108,3 +108,4 @@ docs/_build/
 *~
 \#*\#
 .\#*
+/.claude/settings.local.json
